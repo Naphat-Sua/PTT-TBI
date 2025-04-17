@@ -1,39 +1,49 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Send, Bot, User, RefreshCw, Database } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, Database, Loader2 } from 'lucide-react';
 import { Message, QueryResult } from '@/types';
 import { queryGemini, queryRAG } from '@/utils/api';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // Message Bubble Component
 const MessageBubble = ({ message }: { message: Message }) => {
   const isUser = message.role === 'user';
   
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div 
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}
+    >
       <div className={`flex items-start max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center
-          ${isUser ? 'bg-apple-blue ml-3' : 'bg-gray-300 dark:bg-gray-700 mr-3'}`}>
+        <div 
+          className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 hover:scale-105
+            ${isUser ? 'bg-apple-blue ml-3' : 'bg-gray-200 dark:bg-gray-700 mr-3'}`}
+        >
           {isUser ? 
-            <User className="h-4 w-4 text-white" /> : 
-            <Bot className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+            <User className="h-5 w-5 text-white" /> : 
+            <Bot className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           }
         </div>
         
-        <div className={`py-3 px-4 rounded-2xl ${
-          isUser ? 
-          'bg-apple-blue text-white rounded-tr-none' : 
-          'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
-        }`}>
-          <p className="whitespace-pre-line">{message.content}</p>
+        <div 
+          className={`py-3 px-4 rounded-2xl shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md ${
+            isUser ? 
+            'bg-apple-blue text-white rounded-tr-none' : 
+            'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-gray-700'
+          }`}
+        >
+          <p className="whitespace-pre-line leading-relaxed">{message.content}</p>
           
           {message.sources && message.sources.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/20 dark:border-gray-700">
-              <p className="text-xs font-medium mb-1 opacity-80">Sources:</p>
-              <ul className="space-y-1">
+            <div className="mt-3 pt-3 border-t border-white/20 dark:border-gray-700">
+              <p className="text-xs font-medium mb-2 opacity-80">Sources:</p>
+              <ul className="space-y-1.5">
                 {message.sources.map((source, index) => (
-                  <li key={index} className="text-xs opacity-80">
-                    • {source.documentName}
+                  <li key={index} className="text-xs opacity-80 flex items-start">
+                    <span className="mr-1.5">•</span>
+                    <span>{source.documentName}</span>
                   </li>
                 ))}
               </ul>
@@ -53,6 +63,7 @@ const ChatInterface = () => {
   const [useRAG, setUseRAG] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Load messages from localStorage on component mount
   useEffect(() => {
@@ -63,6 +74,11 @@ const ChatInterface = () => {
       } catch (e) {
         console.error('Failed to load saved messages:', e);
       }
+    }
+    
+    // Focus the input field when the component mounts
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
   }, []);
   
@@ -149,6 +165,11 @@ const ChatInterface = () => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      
+      // Focus the input field after sending a message
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
   
@@ -156,45 +177,58 @@ const ChatInterface = () => {
   const handleClearChat = () => {
     setMessages([]);
     localStorage.removeItem('chatMessages');
+    
+    // Focus the input field after clearing chat
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
   
   return (
-    <div className="h-[calc(100vh-16rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <Card className="h-[calc(100vh-16rem)] flex flex-col overflow-hidden border-gray-200 dark:border-gray-800 transition-all duration-300 hover:shadow-md">
       {/* Chat header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex justify-between items-center">
         <div className="flex items-center">
-          <Bot className="h-5 w-5 text-apple-blue dark:text-apple-highlight mr-2" />
+          <div className="flex items-center justify-center bg-apple-blue/10 dark:bg-apple-blue/20 w-8 h-8 rounded-full mr-3">
+            <Bot className="h-4 w-4 text-apple-blue dark:text-apple-highlight" />
+          </div>
           <h3 className="font-medium text-gray-800 dark:text-gray-200">ChatTBU</h3>
         </div>
         <div className="flex items-center space-x-3">
-          <button
+          <Button
             onClick={() => setUseRAG(!useRAG)}
-            className={`px-3 py-1 rounded-full text-xs font-medium flex items-center
-              ${useRAG ? 
-                'bg-apple-blue/10 text-apple-blue dark:bg-apple-blue/20 dark:text-apple-highlight' : 
-                'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-              }`}
+            variant="outline" 
+            size="sm"
+            className={`rounded-full transition-all duration-300 ${
+              useRAG ? 
+              'bg-apple-blue/10 text-apple-blue border-apple-blue/20 hover:bg-apple-blue/20 dark:bg-apple-blue/20 dark:text-apple-highlight dark:border-apple-blue/30' : 
+              'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+            }`}
           >
-            <Database className="h-3 w-3 mr-1" />
+            <Database className="h-3 w-3 mr-1.5" />
             RAG Mode: {useRAG ? 'ON' : 'OFF'}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleClearChat}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            variant="ghost" 
+            size="icon"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
             title="Clear chat history"
           >
             <RefreshCw className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
       
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center">
-            <Bot className="h-12 w-12 text-gray-300 dark:text-gray-700 mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">ChatTBU Assistant</h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md">
+          <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-apple-blue/10 dark:bg-apple-blue/20 flex items-center justify-center mb-4 animate-scale-in">
+              <Bot className="h-8 w-8 text-apple-blue dark:text-apple-highlight" />
+            </div>
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-200 mb-3">ChatTBU Assistant</h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md leading-relaxed">
               Powered by Google Gemini. Ask me anything or toggle RAG mode to get answers based on your documents.
             </p>
           </div>
@@ -209,43 +243,47 @@ const ChatInterface = () => {
       </div>
       
       {/* Message input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
         <form onSubmit={handleSendMessage} className="relative">
-          <input
+          <Input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             disabled={isLoading}
-            className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 dark:border-gray-700 
-              focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent
-              bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+            className="w-full pl-4 pr-12 py-3 rounded-full border border-gray-300 dark:border-gray-700 
+              focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all duration-200
+              bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-sm"
           />
-          <button
+          <Button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-apple-blue 
-              dark:text-apple-highlight disabled:text-gray-400 dark:disabled:text-gray-600"
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-apple-blue rounded-full
+              dark:text-apple-highlight disabled:text-gray-400 dark:disabled:text-gray-600
+              hover:bg-apple-blue/10 dark:hover:bg-apple-blue/20"
           >
             {isLoading ? (
-              <div className="h-5 w-5 rounded-full border-2 border-apple-blue dark:border-apple-highlight border-t-transparent animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5" />
             )}
-          </button>
+          </Button>
         </form>
       </div>
-    </div>
+    </Card>
   );
 };
 
 // Main ChatTBU Component
 const ChatTBU = () => {
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">ChatTBU</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
           Conversational AI assistant powered by Google Gemini. Ask anything or enable RAG mode to query your documents.
         </p>
       </div>
