@@ -29,7 +29,7 @@ const MessageLoader: React.FC<MessageLoaderProps> = ({
     <div className={cn("flex items-center space-x-2", className)}>
       <div 
         className={cn(
-          "rounded-full animate-bounce", 
+          "rounded-full animate-bounce shadow-sm", 
           dotSizes[size], 
           dotColors[color]
         )} 
@@ -37,7 +37,7 @@ const MessageLoader: React.FC<MessageLoaderProps> = ({
       />
       <div 
         className={cn(
-          "rounded-full animate-bounce", 
+          "rounded-full animate-bounce shadow-sm", 
           dotSizes[size], 
           dotColors[color]
         )} 
@@ -45,7 +45,7 @@ const MessageLoader: React.FC<MessageLoaderProps> = ({
       />
       <div 
         className={cn(
-          "rounded-full animate-bounce", 
+          "rounded-full animate-bounce shadow-sm", 
           dotSizes[size], 
           dotColors[color]
         )} 

@@ -35,7 +35,12 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: acceptedFileTypes,
-    maxFiles
+    maxFiles,
+    // Add noClick: false to ensure it responds to clicks
+    noClick: false,
+    // Add additional configuration to improve responsiveness
+    useFsAccessApi: false,
+    preventDropOnDocument: true
   });
 
   const renderIcon = () => {
@@ -53,7 +58,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors shadow-sm hover:shadow-md
         ${
           isDragActive
             ? 'border-apple-blue bg-blue-50 dark:bg-blue-900/10'
