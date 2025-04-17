@@ -3,26 +3,28 @@ import { Message, QueryResult } from '@/types';
 
 // Gemini API configuration
 const GEMINI_API_KEY = 'AIzaSyBxgn-xDCNbJSnTK4EWScySmImjef6E4g8';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // Function to query the Gemini API
 export async function queryGemini(prompt: string, context?: string): Promise<string> {
   try {
     const url = `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`;
     
-    const systemContext = 'You are ChatTBU, a helpful AI assistant for data analysts and scientists. Provide clear, accurate responses.';
-    
-    let content = [
-      { text: systemContext, role: 'system' },
-      { text: prompt, role: 'user' }
-    ];
+    let content = {
+      contents: [{
+        parts: [{ text: prompt }]
+      }]
+    };
     
     // Add context from RAG if available
     if (context) {
-      content.splice(1, 0, { 
-        text: `Context information: ${context}. Use this information to inform your response.`, 
-        role: 'system' 
-      });
+      content = {
+        contents: [{
+          parts: [
+            { text: `Context information: ${context}. Use this information to inform your response.\n\nUser query: ${prompt}` }
+          ]
+        }]
+      };
     }
     
     const response = await fetch(url, {
@@ -31,7 +33,7 @@ export async function queryGemini(prompt: string, context?: string): Promise<str
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        ...content,
         generationConfig: {
           temperature: 0.7,
           topK: 40,
