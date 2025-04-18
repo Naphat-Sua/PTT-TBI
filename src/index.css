@@ -131,3 +131,46 @@
     transition-all duration-200;
   }
 }
+
+@layer utilities {
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer::before {
+    @apply absolute inset-0;
+    content: '';
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 215, 0, 0.2),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-scale:hover {
+    @apply transform scale-102;
+  }
+
+  .hover-opacity {
+    @apply transition-opacity duration-200;
+  }
+
+  .hover-opacity:hover {
+    @apply opacity-90;
+  }
+}

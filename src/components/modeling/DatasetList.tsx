@@ -1,6 +1,9 @@
 
 import React from 'react';
-import { FileSpreadsheet, FileJson, FileText } from 'lucide-react';
+import { FileType, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDatasetActions } from '@/hooks/useDatasetActions';
+import { DatasetControls } from './DatasetControls';
 
 interface Dataset {
   id: number;
@@ -12,51 +15,72 @@ interface Dataset {
 
 interface DatasetListProps {
   datasets: Dataset[];
+  onDatasetDelete?: (id: number) => void;
+  onDatasetUpdate?: (dataset: Dataset) => void;
 }
 
-export const DatasetList = ({ datasets }: DatasetListProps) => {
-  // Function to get the appropriate icon based on file type
-  const getFileIcon = (type: string) => {
-    switch (type.toUpperCase()) {
-      case 'CSV':
-        return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
-      case 'JSON':
-        return <FileJson className="h-4 w-4 text-blue-500" />;
-      case 'XLSX':
-        return <FileSpreadsheet className="h-4 w-4 text-emerald-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
+export const DatasetList: React.FC<DatasetListProps> = ({
+  datasets,
+  onDatasetDelete,
+  onDatasetUpdate
+}) => {
+  const { isProcessing, processDataset, deleteDataset } = useDatasetActions();
+
+  const handleDelete = async (id: number) => {
+    if (await deleteDataset(id)) {
+      onDatasetDelete?.(id);
+    }
+  };
+
+  const handleProcess = async (dataset: Dataset) => {
+    if (await processDataset(dataset)) {
+      onDatasetUpdate?.(dataset);
     }
   };
 
   return (
-    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-      {datasets.length === 0 ? (
-        <div className="text-center p-6 text-gray-500 dark:text-gray-400">
-          No datasets available
-        </div>
-      ) : (
-        datasets.map((dataset) => (
-          <div 
-            key={dataset.id}
-            className="flex items-center p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer"
-          >
-            <div className="flex-shrink-0 mr-3">
-              {getFileIcon(dataset.type)}
+    <div className="space-y-2">
+      {datasets.map((dataset) => (
+        <div 
+          key={dataset.id} 
+          className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#FFD700] dark:hover:border-[#FFD700] transition-all duration-200"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <div className="bg-gray-100 dark:bg-gray-900 p-2 rounded-lg mr-3">
+                <FileType className="h-5 w-5 text-[#FFD700]" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">{dataset.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {dataset.type} • {dataset.size} • {dataset.date}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{dataset.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {dataset.size} • {dataset.date}
-              </p>
-            </div>
-            <div className="ml-3 flex-shrink-0">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                {dataset.type}
-              </span>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(dataset.id)}
+              className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
-        ))
+          
+          <DatasetControls
+            onAnalyze={() => console.log('Analyzing dataset:', dataset.name)}
+            onExport={() => console.log('Exporting dataset:', dataset.name)}
+            onShare={() => console.log('Sharing dataset:', dataset.name)}
+            onProcess={() => handleProcess(dataset)}
+            isProcessing={isProcessing}
+          />
+        </div>
+      ))}
+      
+      {datasets.length === 0 && (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          No datasets available. Upload a file to get started.
+        </div>
       )}
     </div>
   );
