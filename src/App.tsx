@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +8,6 @@ import Home from "./pages/Home";
 import TBIRAG from "./pages/TBIRAG";
 import ChatTBU from "./pages/ChatTBU";
 import MModeling from "./pages/MModeling";
-import AgentBuilder from "./pages/AgentBuilder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,7 +24,6 @@ const App = () => (
             <Route path="/rag" element={<TBIRAG />} />
             <Route path="/chat" element={<ChatTBU />} />
             <Route path="/modeling" element={<MModeling />} />
-            <Route path="/agents" element={<AgentBuilder />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
