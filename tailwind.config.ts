@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -70,6 +71,11 @@ export default {
 					gray: '#86868B',
 					silver: '#E8E8ED',
 					highlight: '#2997FF'
+				},
+				// Gold gradient colors
+				gold: {
+					light: '#FFD700',
+					dark: '#FF8C00',
 				}
 			},
 			fontFamily: {
@@ -116,14 +122,26 @@ export default {
 						transform: 'scale(1)',
 						opacity: '1'
 					}
+				},
+				'shimmer': {
+					'0%': {
+						'backgroundPosition': '-200% 0'
+					},
+					'100%': {
+						'backgroundPosition': '200% 0'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out',
-				'scale-in': 'scale-in 0.2s ease-out'
-			}
+				'scale-in': 'scale-in 0.2s ease-out',
+				'shimmer': 'shimmer 5s infinite linear'
+			},
+			backgroundSize: {
+				'200%': '200% 100%',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

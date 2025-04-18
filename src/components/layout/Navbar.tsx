@@ -16,12 +16,17 @@ const Navbar = () => {
   const isActiveRoute = (path: string) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-apple-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+    <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo and App Name */}
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="text-apple-blue dark:text-apple-highlight font-semibold text-xl">Data Flow</span>
+          <Link to="/" className="flex items-center space-x-2 group">
+            <span className="font-semibold text-xl relative overflow-hidden">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FFD700] to-[#FF8C00] animate-shimmer inline-block">
+                PTT Data Center
+              </span>
+              <span className="absolute inset-0 rounded-md opacity-20 blur-sm bg-gradient-to-r from-[#FFD700] to-[#FF8C00] animate-pulse"></span>
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -30,11 +35,11 @@ const Navbar = () => {
               <Link 
                 key={item.path}
                 to={item.path}
-                className={`font-medium text-sm ${
+                className={`font-medium text-sm rounded-full px-4 py-2 transition-all duration-200 ${
                   isActiveRoute(item.path) 
-                    ? 'text-apple-blue dark:text-apple-highlight' 
-                    : 'text-gray-600 dark:text-gray-300 hover:text-apple-blue dark:hover:text-apple-highlight'
-                } transition-colors duration-200`}
+                    ? 'text-white bg-gradient-to-r from-[#FFD700]/90 to-[#FF8C00]/90 shadow-md' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
               >
                 {item.name}
               </Link>
@@ -53,16 +58,16 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <div className="md:hidden bg-white dark:bg-apple-dark border-b border-gray-200 dark:border-gray-800 animate-fade-in">
+        <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 animate-fade-in rounded-b-2xl shadow-lg">
           <div className="px-4 pt-2 pb-4 space-y-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`block py-2 px-3 rounded-md text-base font-medium ${
+                className={`block py-2 px-4 rounded-xl text-base font-medium ${
                   isActiveRoute(item.path)
-                    ? 'bg-gray-100 dark:bg-gray-800 text-apple-blue dark:text-apple-highlight'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-apple-blue dark:hover:text-apple-highlight'
+                    ? 'bg-gradient-to-r from-[#FFD700]/90 to-[#FF8C00]/90 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 } transition-colors duration-200`}
                 onClick={() => setIsOpen(false)}
               >
