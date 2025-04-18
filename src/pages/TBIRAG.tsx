@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Upload, Search, File, XCircle, Send, FileText, Trash2, AlertCircle, ChevronDown, ChevronUp, Info } from 'lucide-react';
@@ -17,7 +16,7 @@ const DocumentUploader = ({ onDocumentProcessed }: { onDocumentProcessed: (doc: 
   const [processingError, setProcessingError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const handleFilesAdded = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
     
     const file = acceptedFiles[0];
@@ -88,7 +87,7 @@ const DocumentUploader = ({ onDocumentProcessed }: { onDocumentProcessed: (doc: 
   return (
     <div className="mb-8 animate-fade-in">
       <FileUploadZone
-        onFileUpload={(file) => onDrop([file])}
+        onFilesAdded={handleFilesAdded}
         acceptedFileTypes={acceptedFileTypes}
         icon="document"
         label="Drag & drop a document here, or click to select"

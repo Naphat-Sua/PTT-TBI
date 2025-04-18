@@ -5,6 +5,7 @@ import { Upload, FileSpreadsheet, File } from 'lucide-react';
 
 interface FileUploadZoneProps {
   onFilesAdded: (files: File[]) => void;
+  onFileUpload?: (file: File) => void; // Add this prop for backward compatibility
   acceptedFileTypes?: Record<string, string[]>;
   maxFiles?: number;
   icon?: 'upload' | 'spreadsheet' | 'document';
@@ -16,6 +17,7 @@ interface FileUploadZoneProps {
 
 const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   onFilesAdded,
+  onFileUpload, // Add this prop
   acceptedFileTypes,
   maxFiles = 1,
   icon = 'upload',
@@ -27,9 +29,16 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
+      
+      // Support both callback types
       onFilesAdded(acceptedFiles);
+      
+      // If onFileUpload is provided, call it with the first file
+      if (onFileUpload && acceptedFiles.length > 0) {
+        onFileUpload(acceptedFiles[0]);
+      }
     },
-    [onFilesAdded]
+    [onFilesAdded, onFileUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
