@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileUploadZone } from '@/components/ui/FileUploadZone';
+import FileUploadZone from '@/components/ui/FileUploadZone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowUpDown, BarChart3, Database, FileType, Graph, LayoutDashboard, PlusCircle, Workflow } from 'lucide-react';
+import { ArrowUpDown, BarChart3, Database, FileType, NetworkChart, LayoutDashboard, PlusCircle, Workflow } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SchemaVisualizer } from '@/components/modeling/SchemaVisualizer';
 import { DataProfiler } from '@/components/modeling/DataProfiler';
@@ -166,7 +165,7 @@ const MModeling = () => {
                     Data Profiling
                   </TabsTrigger>
                   <TabsTrigger value="graph" className="rounded-lg">
-                    <Graph className="h-4 w-4 mr-2" />
+                    <NetworkChart className="h-4 w-4 mr-2" />
                     Graph View
                   </TabsTrigger>
                 </TabsList>

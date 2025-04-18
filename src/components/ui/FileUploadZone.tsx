@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, FileSpreadsheet, File } from 'lucide-react';
 
 interface FileUploadZoneProps {
-  onFileUpload: (file: File) => void;
+  onFilesAdded: (files: File[]) => void;
   acceptedFileTypes?: Record<string, string[]>;
   maxFiles?: number;
   icon?: 'upload' | 'spreadsheet' | 'document';
@@ -15,7 +15,7 @@ interface FileUploadZoneProps {
 }
 
 const FileUploadZone: React.FC<FileUploadZoneProps> = ({
-  onFileUpload,
+  onFilesAdded,
   acceptedFileTypes,
   maxFiles = 1,
   icon = 'upload',
@@ -27,9 +27,9 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
-      onFileUpload(acceptedFiles[0]);
+      onFilesAdded(acceptedFiles);
     },
-    [onFileUpload]
+    [onFilesAdded]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
