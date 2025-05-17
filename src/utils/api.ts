@@ -4,7 +4,7 @@ import path from 'path';
 import emailjs from '@emailjs/browser';
 
 // Gemini API configuration
-const GEMINI_API_KEY = 'AIzaSyBxgn-xDCNbJSnTK4EWScySmImjef6E4g8';
+const GEMINI_API_KEY = 'Insert your API key here';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // Function to query the Gemini API
