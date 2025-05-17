@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Database, MessageSquare, BarChart3, Bot } from 'lucide-react';
+import { ChevronRight, Database, MessageSquare, BarChart3, LineChart, TrendingUp } from 'lucide-react';
 
 const Home = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -19,26 +18,33 @@ const Home = () => {
       delay: 100
     },
     {
+      name: 'Full RAG',
+      description: 'Analyze real-time WTI crude oil market data using AI-powered insights',
+      icon: <LineChart className="h-6 w-6 text-gold-light" />,
+      path: '/fullrag',
+      delay: 150
+    },
+    {
+      name: 'AlgoTrade',
+      description: 'Develop and test trading strategies using historical WTI Crude Oil price data',
+      icon: <TrendingUp className="h-6 w-6 text-gold-light" />,
+      path: '/algotrade',
+      delay: 200
+    },
+    {
       name: 'ChatTBU',
-      description: 'Conversational AI assistant powered by Google Gemini',
+      description: 'Conversational AI assistant powered by Claude and DeepSeek',
       icon: <MessageSquare className="h-6 w-6 text-gold-light" />,
       path: '/chat',
-      delay: 200
+      delay: 250
     },
     {
       name: 'M-Modeling',
       description: 'Data science modeling assistant for analysis and prediction',
       icon: <BarChart3 className="h-6 w-6 text-gold-light" />,
+      comingSoon: true,
       path: '/modeling',
       delay: 300
-    },
-    {
-      name: '007Agents',
-      description: 'Build custom AI agents with visual workflows',
-      icon: <Bot className="h-6 w-6 text-gold-light" />,
-      path: '/agents',
-      delay: 400,
-      comingSoon: true
     }
   ];
 
@@ -46,13 +52,13 @@ const Home = () => {
     <div className={`min-h-[80vh] flex flex-col justify-center transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 relative inline-block">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gold-light to-gold-dark animate-shimmer bg-200%">
-            PTT Data Center
-          </span>
+            <span className="text-[#DFBD69]">
+            TBU Platform
+            </span>
           <span className="absolute inset-0 rounded-lg opacity-20 blur-md bg-gradient-to-r from-gold-light to-gold-dark animate-pulse"></span>
         </h1>
         <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mt-4">
-          Advanced tools for energy-tech enterprise analytics
+          Advanced tools for Trading Business team
         </p>
       </div>
 
@@ -69,7 +75,7 @@ const Home = () => {
                 rounded-xl flex items-center justify-center mb-5 shadow-inner">
               {feature.icon}
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">{feature.name}</h3>
+            <h3 className="text-xl font-semibold mb-2 text-[#DFBD69] dark:text-[#DFBD69]">{feature.name}</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-4">{feature.description}</p>
             
             {feature.comingSoon ? (
@@ -79,9 +85,9 @@ const Home = () => {
             ) : (
               <Link 
                 to={feature.path}
-                className="inline-flex items-center text-gold-dark dark:text-gold-light font-medium hover:underline"
+                className="inline-flex items-center text-[#DFBD69] dark:text-[#DFBD69] font-medium hover:underline transition-colors duration-300 hover:text-[#B89D4F] dark:hover:text-[#B89D4F]"
               >
-                Get started <ChevronRight className="ml-1 h-4 w-4" />
+                Get Started <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             )}
             

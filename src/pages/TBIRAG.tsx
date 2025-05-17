@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Upload, Search, File, XCircle, Send, FileText, Trash2, AlertCircle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Upload, Search, File, XCircle, Send, FileText, Trash2, AlertCircle, ChevronDown, ChevronUp, Info, BookOpen } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
-import { Document, QueryResult } from '@/types';
+import { Document, QueryResult, ChatMessage } from '@/types';
 import { processFile, chunkText, queryRAG } from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -89,6 +89,7 @@ const DocumentUploader = ({ onDocumentProcessed }: { onDocumentProcessed: (doc: 
       <FileUploadZone
         onFilesAdded={handleFilesAdded}
         acceptedFileTypes={acceptedFileTypes}
+        maxSize={100 * 1024 * 1024} // Allow up to 100MB files
         icon="document"
         label="Drag & drop a document here, or click to select"
         sublabel="Supported formats: TXT, PDF, DOC, DOCX, CSV"
@@ -123,13 +124,13 @@ const DocumentList = ({
   };
 
   return (
-    <Card className="mb-8 overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+    <Card className="mb-8 overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in rounded-3xl">
       <div 
         className="flex items-center justify-between p-4 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center">
-          <FileText className="h-5 w-5 text-apple-blue dark:text-apple-highlight mr-2" />
+          <FileText className="h-5 w-5 text-[#DFBD69] dark:text-[#DFBD69] mr-2" />
           <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Your Documents ({documents.length})</h3>
         </div>
         <Button
@@ -208,20 +209,25 @@ const QueryInterface = ({
     setError(null);
     
     try {
-      // Get document content for context
-      const docContents = documents.map(doc => doc.content || '');
-      
       // Create a temporary user-facing message with the query
       const tempResult: QueryResult = {
         answer: 'Searching documents...',
+        query: query, // Store the user's query
         sources: []
       };
       
       // Pass the temporary result to show searching status
       onQueryResult(tempResult);
       
-      // Query the RAG system (This will be replaced by the real response)
-      const result = await queryRAG(query, docContents);
+      // Get document contents and names for context
+      const docContents = documents.map(doc => doc.content || '');
+      const docNames = documents.map(doc => doc.name);
+      
+      // Query the RAG system with both document contents and names
+      const result = await queryRAG(query, docContents, docNames);
+      
+      // Make sure to include the user's query in the result
+      result.query = query;
       
       // Pass result to parent component
       onQueryResult(result);
@@ -244,39 +250,37 @@ const QueryInterface = ({
   const hasDocuments = documents.length > 0;
   
   return (
-    <Card className="mb-8 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+    <Card className="mb-8 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in rounded-3xl">
       <CardContent className="p-6">
         <div className="flex items-center mb-4">
-          <Search className="h-5 w-5 text-apple-blue dark:text-apple-highlight mr-2" />
+          <Search className="h-5 w-5 text-[#DFBD69] dark:text-[#DFBD69] mr-2" />
           <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Ask a Question</h3>
         </div>
         
         <form onSubmit={handleSubmit} className="relative">
-          <div className="relative">
+          <div className="chat-input-container relative bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={hasDocuments ? "Ask something about your documents..." : "Upload documents first..."}
+              placeholder={hasDocuments ? "Type your message..." : "Upload documents first..."}
               disabled={!hasDocuments || isQuerying}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 
-                focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent
-                bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 pr-12
-                disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed
-                transition-all duration-200"
+              className="w-full px-6 py-4 bg-transparent border-none focus:outline-none focus:ring-0
+                text-gray-800 dark:text-gray-200 pr-14
+                disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed"
             />
             <Button
               type="submit"
               disabled={!hasDocuments || !query.trim() || isQuerying}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-lg
-                text-white bg-apple-blue hover:bg-apple-blue/90 disabled:bg-gray-400
-                dark:bg-apple-highlight dark:hover:bg-apple-highlight/90 dark:disabled:bg-gray-700 
-                disabled:cursor-not-allowed transition-colors duration-200 h-8 w-8 p-0"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full
+                text-white bg-gradient-to-r from-[#DFBD69] to-[#B89D4F] hover:bg-gradient-to-r hover:from-[#DFBD69]/90 hover:to-[#B89D4F]/90 disabled:bg-gray-400
+                dark:bg-gradient-to-r dark:from-[#DFBD69] dark:to-[#B89D4F] dark:hover:from-[#DFBD69]/90 dark:hover:to-[#B89D4F]/90 dark:disabled:bg-gray-700 
+                disabled:cursor-not-allowed transition-colors duration-200 h-10 w-10 p-0 flex items-center justify-center"
             >
               {isQuerying ? (
                 <MessageLoader size="sm" color="secondary" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               )}
             </Button>
           </div>
@@ -309,7 +313,7 @@ const ResultsDisplay = ({ results, isQuerying }: { results: QueryResult[], isQue
   return (
     <div className="animate-fade-in">
       <div className="flex items-center mb-4">
-        <Search className="h-5 w-5 text-apple-blue dark:text-apple-highlight mr-2" />
+        <Search className="h-5 w-5 text-[#DFBD69] dark:text-[#DFBD69] mr-2" />
         <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Results</h3>
       </div>
       
@@ -318,7 +322,7 @@ const ResultsDisplay = ({ results, isQuerying }: { results: QueryResult[], isQue
           <Card 
             key={index}
             className={`border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md 
-              transition-all duration-300 overflow-hidden ${index === 0 && isQuerying ? 'animate-pulse' : 'animate-scale-in'}`}
+              transition-all duration-300 overflow-hidden rounded-3xl ${index === 0 && isQuerying ? 'animate-pulse' : 'animate-scale-in'}`}
           >
             <div className="p-6">
               <div className="prose dark:prose-invert max-w-none">
@@ -334,19 +338,34 @@ const ResultsDisplay = ({ results, isQuerying }: { results: QueryResult[], isQue
                 )}
               </div>
               
+              {/* Display the user's query below the answer */}
+              {result.query && !isQuerying && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <div className="flex items-start">
+                    <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full mr-3 mt-0.5">
+                      <Search className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You asked:</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{result.query}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {result.sources.length > 0 && !isQuerying && (
-                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                   <p className="font-medium text-sm text-gray-600 dark:text-gray-300 mb-3 flex items-center">
-                    <FileText className="h-4 w-4 mr-1.5 text-apple-blue dark:text-apple-highlight" />
+                    <FileText className="h-4 w-4 mr-1.5 text-[#DFBD69] dark:text-[#DFBD69]" />
                     Sources
                   </p>
                   <ul className="space-y-3">
                     {result.sources.map((source, i) => (
                       <li 
                         key={i} 
-                        className="text-sm bg-gray-50 dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800"
+                        className="text-sm bg-gray-50 dark:bg-gray-900 rounded-2xl p-3 border border-gray-200 dark:border-gray-800"
                       >
-                        <p className="font-medium text-apple-blue dark:text-apple-highlight mb-1">
+                        <p className="font-medium text-[#DFBD69] dark:text-[#DFBD69] mb-1">
                           {source.documentName}
                         </p>
                         {source.excerpt && (
@@ -367,15 +386,244 @@ const ResultsDisplay = ({ results, isQuerying }: { results: QueryResult[], isQue
   );
 };
 
+// Chat History Display Component
+const ChatHistoryDisplay = ({ 
+  chatHistory,
+  isQuerying,
+  onClear
+}: { 
+  chatHistory: ChatMessage[], 
+  isQuerying: boolean,
+  onClear: () => void
+}) => {
+  if (chatHistory.length === 0 && !isQuerying) {
+    return null;
+  }
+
+  // Format timestamp to HH:MM:SS
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+  
+  // Create a reversed copy of chat history to show newest first
+  const reversedChatHistory = [...chatHistory].reverse();
+
+  return (
+    <div className="animate-fade-in mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <FileText className="h-5 w-5 text-[#DFBD69] dark:text-[#DFBD69] mr-2" />
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Conversation History</h3>
+        </div>
+        {chatHistory.length > 0 && (
+          <Button
+            onClick={onClear}
+            variant="ghost"
+            size="sm"
+            className="text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+          >
+            Clear history
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {isQuerying && (
+          <Card className="border border-gray-200 dark:border-gray-800 shadow-sm animate-pulse rounded-3xl">
+            <div className="p-4">
+              <div className="flex items-center space-x-3">
+                <MessageLoader color="primary" />
+                <p className="text-gray-600 dark:text-gray-300">Searching documents and generating response...</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Display chat messages with newest first */}
+        {reversedChatHistory.map((message) => {
+          // Find the next message to link user questions with AI responses
+          const isUserMessage = message.type === 'user';
+          
+          return (
+            <Card 
+              key={message.id}
+              className={`border ${
+                isUserMessage 
+                  ? 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50' 
+                  : 'border-gray-200 dark:border-gray-800'
+              } shadow-sm transition-all duration-300 rounded-3xl`}
+            >
+              <div className="p-4">
+                {/* User message */}
+                {isUserMessage && (
+                  <div className="flex items-start">
+                    <div className="bg-gray-200 dark:bg-gray-800 p-2 rounded-full mr-3 mt-0.5">
+                      <Search className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          You asked:
+                        </p>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatTime(message.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed mt-1">
+                        {message.content}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Assistant message */}
+                {!isUserMessage && (
+                  <div>
+                    <div className="flex items-start mb-3">
+                      <div className="bg-gradient-to-r from-[#DFBD69] to-[#B89D4F] p-2 rounded-full mr-3 mt-0.5">
+                        <FileText className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Answer:
+                          </p>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTime(message.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="prose dark:prose-invert max-w-none ml-9">
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed">
+                        {message.content}
+                      </p>
+                    </div>
+
+                    {/* Sources section */}
+                    {message.sources && message.sources.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 ml-9">
+                        <p className="font-medium text-sm text-gray-600 dark:text-gray-300 mb-3 flex items-center">
+                          <FileText className="h-4 w-4 mr-1.5 text-[#DFBD69] dark:text-[#DFBD69]" />
+                          Sources
+                        </p>
+                        <ul className="space-y-3">
+                          {message.sources.map((source, i) => (
+                            <li 
+                              key={i} 
+                              className="text-sm bg-gray-50 dark:bg-gray-900 rounded-2xl p-3 border border-gray-200 dark:border-gray-800"
+                            >
+                              <p className="font-medium text-[#DFBD69] dark:text-[#DFBD69] mb-1">
+                                {source.documentName}
+                              </p>
+                              {source.excerpt && (
+                                <p className="text-gray-600 dark:text-gray-300 text-xs mt-1 italic">
+                                  "{source.excerpt}"
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Usage Manual Component
+const UsageManual = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <Card className="mb-8 overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in rounded-3xl">
+      <div 
+        className="flex items-center justify-between p-4 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center">
+          <BookOpen className="h-5 w-5 text-[#DFBD69] dark:text-[#DFBD69] mr-2" />
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">How to Use TBIRAG</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full h-8 w-8 hover:bg-gray-200 dark:hover:bg-gray-800"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+        >
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          )}
+        </Button>
+      </div>
+      
+      {isExpanded && (
+        <CardContent className="p-6">
+          <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-200">
+            <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-0">Getting Started</h4>
+            <ol className="space-y-3 mt-3">
+              <li>
+                <strong>Upload Documents</strong> - Start by uploading one or more documents (PDF, TXT, DOC, DOCX, CSV) using the document uploader at the top of the page.
+              </li>
+              <li>
+                <strong>Ask Questions</strong> - Once your documents are uploaded, use the question box to ask anything related to the content of your documents.
+              </li>
+              <li>
+                <strong>Review Answers</strong> - The system will analyze your documents and provide an answer with relevant sources from your documents.
+              </li>
+            </ol>
+            
+            <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-6">Tips for Better Results</h4>
+            <ul className="space-y-2 mt-3">
+              <li>Ask specific questions rather than open-ended ones for more precise answers.</li>
+              <li>You can upload multiple documents to compare information across sources.</li>
+              <li>The system works best with clearly formatted documents.</li>
+              <li>Check the "Sources" section to verify where information came from.</li>
+              <li>Your documents and chat history are saved locally and will persist between sessions.</li>
+            </ul>
+            
+            <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-6">Example Questions</h4>
+            <ul className="space-y-2 mt-3">
+              <li>"What are the key findings in the document?"</li>
+              <li>"Summarize the section about [specific topic]."</li>
+              <li>"What does the document say about [specific term]?"</li>
+              <li>"Compare how [topic] is discussed in the uploaded documents."</li>
+              <li>"What are the recommendations mentioned in the third section?"</li>
+            </ul>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+};
+
 // Main TBIRAG Component
 const TBIRAG = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [results, setResults] = useState<QueryResult[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isQuerying, setIsQuerying] = useState(false);
   const { toast } = useToast();
   
-  // Load documents from localStorage on component mount
+  // Load documents and chat history from localStorage on component mount
   useEffect(() => {
+    // Load documents
     const savedDocs = localStorage.getItem('ragDocuments');
     if (savedDocs) {
       try {
@@ -389,12 +637,26 @@ const TBIRAG = () => {
         });
       }
     }
+    
+    // Load chat history
+    const savedChat = localStorage.getItem('ragChatHistory');
+    if (savedChat) {
+      try {
+        setChatHistory(JSON.parse(savedChat));
+      } catch (e) {
+        console.error('Failed to load chat history:', e);
+      }
+    }
   }, [toast]);
   
-  // Save documents to localStorage when they change
+  // Save documents and chat history to localStorage when they change
   useEffect(() => {
     localStorage.setItem('ragDocuments', JSON.stringify(documents));
   }, [documents]);
+  
+  useEffect(() => {
+    localStorage.setItem('ragChatHistory', JSON.stringify(chatHistory));
+  }, [chatHistory]);
   
   // Handle adding a new document
   const handleDocumentProcessed = (newDocument: Document) => {
@@ -408,23 +670,46 @@ const TBIRAG = () => {
   
   // Handle query results
   const handleQueryResult = async (result: QueryResult) => {
-    // If this is a "searching" placeholder, replace the first result
+    // If this is a "searching" placeholder, just set the querying state
     if (result.answer === 'Searching documents...') {
       setIsQuerying(true);
-      setResults(prevResults => [result, ...prevResults.slice(1)]);
       return;
     }
     
-    // For real results, add them at the beginning
-    setResults(prevResults => [result, ...prevResults]);
+    // For real results, add both the user query and the AI response to the chat history
+    if (result.query) {
+      const userMessage: ChatMessage = {
+        id: uuidv4(),
+        type: 'user',
+        content: result.query,
+        timestamp: new Date(),
+      };
+      
+      const assistantMessage: ChatMessage = {
+        id: uuidv4(),
+        type: 'assistant',
+        content: result.answer,
+        timestamp: new Date(),
+        sources: result.sources
+      };
+      
+      // Add both messages to the chat history
+      setChatHistory(prev => [...prev, userMessage, assistantMessage]);
+    }
+    
     setIsQuerying(false);
   };
   
+  // Clear chat history
+  const handleClearChat = () => {
+    setChatHistory([]);
+  };
+  
   return (
-    <div className="animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">TBIRAG</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+        <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-[#DFBD69] to-[#B89D4F] bg-clip-text text-transparent">TBIRAG</h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
           Retrieval-Augmented Generation System. Upload documents and ask questions to get smart, contextual answers.
         </p>
       </div>
@@ -437,7 +722,12 @@ const TBIRAG = () => {
           onQueryResult={handleQueryResult} 
           isQuerying={isQuerying}
         />
-        <ResultsDisplay results={results} isQuerying={isQuerying} />
+        <ChatHistoryDisplay 
+          chatHistory={chatHistory} 
+          isQuerying={isQuerying} 
+          onClear={handleClearChat}
+        />
+        <UsageManual />
       </div>
     </div>
   );

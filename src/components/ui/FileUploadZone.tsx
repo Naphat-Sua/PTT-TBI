@@ -1,13 +1,13 @@
-
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileSpreadsheet, File, FileImage, FileText } from 'lucide-react';
+import { Upload, FileSpreadsheet, File, FileImage, FileText, AlertCircle } from 'lucide-react';
 
 interface FileUploadZoneProps {
   onFilesAdded: (files: File[]) => void;
   onFileUpload?: (file: File) => void; // Add this prop for backward compatibility
   acceptedFileTypes?: Record<string, string[]>;
   maxFiles?: number;
+  maxSize?: number; // Maximum file size in bytes
   icon?: 'upload' | 'spreadsheet' | 'document' | 'image' | 'text';
   label?: string;
   sublabel?: string;
@@ -20,15 +20,20 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   onFileUpload, // Add this prop
   acceptedFileTypes,
   maxFiles = 1,
+  maxSize = 50 * 1024 * 1024, // Default to 50MB max file size
   icon = 'upload',
   label = 'Drag & drop a file here, or click to select',
   sublabel = 'Supported formats: Various file types',
   isProcessing = false,
   error = null
 }) => {
+  const [uploadError, setUploadError] = useState<string | null>(error);
+
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
+      
+      setUploadError(null);
       
       // Support both callback types
       onFilesAdded(acceptedFiles);
@@ -41,16 +46,37 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     [onFilesAdded, onFileUpload]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: acceptedFileTypes,
     maxFiles,
+    maxSize, // Set the max file size
     // Add noClick: false to ensure it responds to clicks
     noClick: false,
     // Add additional configuration to improve responsiveness
     useFsAccessApi: false,
-    preventDropOnDocument: true
+    preventDropOnDocument: true,
+    onDropRejected: (rejections) => {
+      if (rejections.length > 0) {
+        const rejection = rejections[0];
+        if (rejection.errors.some(err => err.code === 'file-too-large')) {
+          const fileSize = (rejection.file.size / (1024 * 1024)).toFixed(2);
+          setUploadError(`File too large: ${fileSize}MB. Maximum size is ${(maxSize / (1024 * 1024)).toFixed(2)}MB.`);
+        } else if (rejection.errors.some(err => err.code === 'file-invalid-type')) {
+          setUploadError('Invalid file type. Please check supported formats.');
+        } else {
+          setUploadError('File upload failed. Please try again.');
+        }
+      }
+    }
   });
+
+  // Format size to human readable format
+  const formatSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
 
   const renderIcon = () => {
     switch (icon) {
@@ -68,6 +94,9 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     }
   };
 
+  // Use component state error or prop error
+  const displayError = uploadError || error;
+
   return (
     <div
       {...getRootProps()}
@@ -76,7 +105,9 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           isDragActive
             ? 'border-[#FFD700] bg-yellow-50 dark:bg-yellow-900/10'
             : 'border-gray-300 dark:border-gray-700 hover:border-[#FFD700] dark:hover:border-[#FFD700]'
-        }`}
+        }
+        ${displayError ? 'border-red-400 dark:border-red-600' : ''}
+        `}
     >
       <input {...getInputProps()} />
       {renderIcon()}
@@ -92,10 +123,16 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         <>
           <p className="text-lg font-medium text-gray-700 dark:text-gray-200">{label}</p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{sublabel}</p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Max size: {formatSize(maxSize)}</p>
         </>
       )}
 
-      {error && <p className="mt-3 text-red-500 dark:text-red-400">{error}</p>}
+      {displayError && (
+        <div className="mt-3 flex items-center justify-center text-red-500 dark:text-red-400">
+          <AlertCircle className="h-4 w-4 mr-1.5" />
+          <p>{displayError}</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,8 @@
-
 import React from 'react';
 import Navbar from './Navbar';
+import FloatingChat from '../chat/FloatingChat';
+import { ThemeToggle } from '../ThemeToggle';
+import { ContactAdmin } from '../ContactAdmin';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,10 +18,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 py-6 transition-all duration-300 shadow-md rounded-t-xl mx-4">
         <div className="container mx-auto px-4 sm:px-6">
           <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
-            &copy; {new Date().getFullYear()} PTT Data Center. All rights reserved.
+            <a 
+              href="https://www.ptt-trading.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-[#DFBD69] transition-colors duration-200 cursor-pointer"
+            >
+              &copy; {new Date().getFullYear()} Trading Business Intelligence
+            </a>
           </p>
         </div>
       </footer>
+      
+      {/* Contact Admin Button */}
+      <ContactAdmin />
+      
+      {/* Theme Toggle Button */}
+      <ThemeToggle />
+      
+      {/* Floating Chat Assistant */}
+      <FloatingChat />
     </div>
   );
 };

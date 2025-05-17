@@ -1,4 +1,3 @@
-
 // Common types used throughout the application
 
 // Message types for the chat interface
@@ -10,6 +9,74 @@ export interface Message {
   sources?: DocumentSource[];
 }
 
+// AlgoTrade types
+export interface BacktestParameters {
+  ticker: string;
+  startDate: string;
+  endDate: string;
+  initialCapital: number;
+  commission?: number;
+  slippage?: number;
+}
+
+export interface BacktestStrategy {
+  code: string;
+  name?: string;
+  description?: string;
+}
+
+export interface PriceBar {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface TradeSignal {
+  date: string;
+  type: 'buy' | 'sell';
+  price: number;
+  size: number;
+  value: number;
+}
+
+export interface EquityPoint {
+  date: string;
+  value: number;
+  cash: number;
+  holdings: number;
+}
+
+export interface BacktestPerformance {
+  totalReturn: number;
+  annualizedReturn: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  winRate: number;
+  totalTrades: number;
+  profitFactor?: number;
+  averageWin?: number;
+  averageLoss?: number;
+  maxWin?: number;
+  maxLoss?: number;
+}
+
+export interface BacktestResult {
+  status: 'success' | 'error';
+  message?: string;
+  priceData: PriceBar[];
+  trades: TradeSignal[];
+  equity: EquityPoint[];
+  performance: BacktestPerformance;
+}
+
+export interface BacktestRequest {
+  parameters: BacktestParameters;
+  strategy: BacktestStrategy;
+}
+
 // Document types for the RAG system
 export interface Document {
   id: string;
@@ -19,6 +86,11 @@ export interface Document {
   uploadedAt: Date;
   content?: string;
   chunks?: DocumentChunk[];
+  summary?: string;
+  isProcessingSummary?: boolean;
+  preview?: string;
+  tags?: string[];
+  lastAccessed?: Date;
 }
 
 export interface DocumentChunk {
@@ -38,8 +110,22 @@ export interface DocumentSource {
 
 // Query types
 export interface QueryResult {
+  id?: string;
   answer: string;
+  query?: string;
   sources: DocumentSource[];
+  timestamp?: Date;
+}
+
+// Chat history types
+export interface ChatMessage {
+  id: string;
+  type: 'user' | 'assistant' | 'combined';
+  content: string;
+  timestamp: Date;
+  sources?: DocumentSource[];
+  userQuery?: string;  // For combined type messages
+  aiResponse?: string; // For combined type messages
 }
 
 // Model types

@@ -1,40 +1,57 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { FileType, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDatasetActions } from '@/hooks/useDatasetActions';
 import { DatasetControls } from './DatasetControls';
-
-interface Dataset {
-  id: number;
-  name: string;
-  size: string;
-  date: string;
-  type: string;
-}
+import { Dataset, formatFileSize, formatDate, deleteDataset } from '@/utils/dataModelingService';
+import { useToast } from '@/hooks/use-toast';
 
 interface DatasetListProps {
   datasets: Dataset[];
-  onDatasetDelete?: (id: number) => void;
-  onDatasetUpdate?: (dataset: Dataset) => void;
+  onDatasetSelect?: (dataset: Dataset) => void;
+  onDatasetDelete?: (id: string) => void;
+  refreshDatasets?: () => void;
 }
 
 export const DatasetList: React.FC<DatasetListProps> = ({
   datasets,
+  onDatasetSelect,
   onDatasetDelete,
-  onDatasetUpdate
+  refreshDatasets
 }) => {
-  const { isProcessing, processDataset, deleteDataset } = useDatasetActions();
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const handleDelete = async (id: number) => {
-    if (await deleteDataset(id)) {
-      onDatasetDelete?.(id);
+  const handleDelete = async (dataset: Dataset) => {
+    if (confirm(`Are you sure you want to delete "${dataset.name}"?`)) {
+      try {
+        setProcessingId(dataset.id);
+        await deleteDataset(dataset.id);
+        toast({
+          title: "Dataset deleted",
+          description: `${dataset.name} has been removed.`,
+        });
+        
+        if (onDatasetDelete) {
+          onDatasetDelete(dataset.id);
+        } else if (refreshDatasets) {
+          refreshDatasets();
+        }
+      } catch (error) {
+        console.error("Failed to delete dataset:", error);
+        toast({
+          title: "Error deleting dataset",
+          description: "There was a problem deleting the dataset. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setProcessingId(null);
+      }
     }
   };
 
-  const handleProcess = async (dataset: Dataset) => {
-    if (await processDataset(dataset)) {
-      onDatasetUpdate?.(dataset);
+  const handleAnalyze = (dataset: Dataset) => {
+    if (onDatasetSelect) {
+      onDatasetSelect(dataset);
     }
   };
 
@@ -53,26 +70,30 @@ export const DatasetList: React.FC<DatasetListProps> = ({
               <div>
                 <h3 className="font-medium text-gray-900 dark:text-gray-100">{dataset.name}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {dataset.type} • {dataset.size} • {dataset.date}
+                  {dataset.file_type} • {formatFileSize(dataset.size)} • {formatDate(dataset.uploaded_at)}
                 </p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDelete(dataset.id)}
+              disabled={processingId === dataset.id}
+              onClick={() => handleDelete(dataset)}
               className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
             >
-              <Trash2 className="h-4 w-4" />
+              {processingId === dataset.id ? (
+                <span className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full"></span>
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
           
           <DatasetControls
-            onAnalyze={() => console.log('Analyzing dataset:', dataset.name)}
+            onAnalyze={() => handleAnalyze(dataset)}
             onExport={() => console.log('Exporting dataset:', dataset.name)}
             onShare={() => console.log('Sharing dataset:', dataset.name)}
-            onProcess={() => handleProcess(dataset)}
-            isProcessing={isProcessing}
+            isProcessing={processingId === dataset.id}
           />
         </div>
       ))}
