@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Environment files (use .env.example as the template)
+.env
+.env.*
+!.env.example
+
+# Python backend
+__pycache__/
+*.pyc
+.venv/
+backend/uploads/
+backend/database.sqlite
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

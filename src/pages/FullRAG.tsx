@@ -846,24 +846,30 @@ const FullRAG = () => {
   useEffect(() => {
     try {
       // Load documents - using a different key than TBIRAG to maintain separate storage
+      type SerializedDocument = Omit<Document, 'uploadedAt' | 'lastAccessed'> & {
+        uploadedAt: string;
+        lastAccessed?: string;
+      };
+      type SerializedChatMessage = Omit<ChatMessage, 'timestamp'> & { timestamp: string };
+
       const savedDocs = localStorage.getItem('fullRagDocuments');
       if (savedDocs) {
-        const parsedDocs = JSON.parse(savedDocs);
+        const parsedDocs: SerializedDocument[] = JSON.parse(savedDocs);
         // Convert string dates back to Date objects
-        const processedDocs = parsedDocs.map((doc: any) => ({
+        const processedDocs: Document[] = parsedDocs.map((doc) => ({
           ...doc,
           uploadedAt: new Date(doc.uploadedAt),
           lastAccessed: doc.lastAccessed ? new Date(doc.lastAccessed) : undefined
         }));
         setDocuments(processedDocs);
       }
-      
+
       // Load chat history - using a different key than TBIRAG
       const savedChat = localStorage.getItem('fullRagChatHistory');
       if (savedChat) {
-        const parsedChat = JSON.parse(savedChat);
+        const parsedChat: SerializedChatMessage[] = JSON.parse(savedChat);
         // Convert string dates back to Date objects
-        const processedChat = parsedChat.map((msg: any) => ({
+        const processedChat: ChatMessage[] = parsedChat.map((msg) => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
         }));
@@ -891,7 +897,7 @@ const FullRAG = () => {
         variant: "destructive",
       });
     }
-  }, [documents]);
+  }, [documents, toast]);
   
   useEffect(() => {
     try {
@@ -949,6 +955,7 @@ const FullRAG = () => {
       const combinedMessage: ChatMessage = {
         id: uuidv4(),
         type: 'combined',
+        content: result.answer,
         userQuery: result.query,
         aiResponse: result.answer,
         timestamp: new Date(),

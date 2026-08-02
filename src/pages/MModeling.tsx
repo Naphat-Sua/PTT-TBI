@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import FileUploadZone from '@/components/ui/FileUploadZone';
@@ -46,12 +46,7 @@ const MModeling = () => {
     password: "password"
   });
 
-  // Fetch datasets on component mount
-  useEffect(() => {
-    loadDatasets();
-  }, []);
-
-  const loadDatasets = async () => {
+  const loadDatasets = useCallback(async () => {
     try {
       const data = await fetchDatasets();
       setDatasets(data);
@@ -63,7 +58,12 @@ const MModeling = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
+
+  // Fetch datasets on component mount
+  useEffect(() => {
+    loadDatasets();
+  }, [loadDatasets]);
 
   const handleFilesDrop = (files: File[]) => {
     setUploadedFiles(files);
@@ -191,7 +191,7 @@ const MModeling = () => {
                       'application/json': ['.json'],
                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
                     }}
-                    onFilesDrop={handleFilesDrop}
+                    onFilesAdded={handleFilesDrop}
                     maxFiles={5}
                     maxSize={10 * 1024 * 1024} // 10MB
                   />

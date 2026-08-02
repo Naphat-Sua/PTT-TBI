@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Define the base URL for API calls
-const API_BASE_URL = 'http://localhost:5000/api';
+// Base URL for the data-modeling API (Flask backend). Override with
+// VITE_DATA_API_URL when the backend runs elsewhere.
+const API_BASE_URL = import.meta.env.VITE_DATA_API_URL ?? 'http://localhost:5000/api';
 
 // Types
 export interface Dataset {
@@ -49,7 +50,7 @@ export interface DataProfile {
 
 export interface DataPreview {
   columns: string[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 // API functions

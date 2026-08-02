@@ -1,7 +1,7 @@
 import { Document } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
-interface OilDataPoint {
+export interface OilDataPoint {
   date: string;
   open?: number;
   high?: number;

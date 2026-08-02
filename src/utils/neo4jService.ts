@@ -18,7 +18,7 @@ export type GraphNode = {
   val: number;
   color?: string;
   group?: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 };
 
 export type GraphLink = {
@@ -26,7 +26,19 @@ export type GraphLink = {
   target: string;
   type?: string;
   value?: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
+};
+
+export type CypherQueryResult = {
+  success: boolean;
+  query: string;
+  params?: Record<string, unknown>;
+};
+
+export type EntityDefinition = {
+  label: string;
+  type: string;
+  name: string;
 };
 
 export type GraphData = {
@@ -41,7 +53,7 @@ export type GraphData = {
 export class Neo4jService {
   private config: Neo4jConfig;
   private isConnected: boolean = false;
-  private driver: any = null;
+  private driver: unknown = null;
 
   constructor(config: Neo4jConfig) {
     this.config = config;
@@ -89,7 +101,7 @@ export class Neo4jService {
   /**
    * Execute a Cypher query
    */
-  public async executeCypher(cypher: string, params?: Record<string, any>): Promise<any> {
+  public async executeCypher(cypher: string, params?: Record<string, unknown>): Promise<CypherQueryResult> {
     if (!this.isConnected) {
       throw new Error('Not connected to Neo4j');
     }
@@ -157,7 +169,7 @@ export class Neo4jService {
   /**
    * Generate Cypher schema from entity definitions
    */
-  public generateCypherSchema(entities: Record<string, any>[]): string {
+  public generateCypherSchema(entities: EntityDefinition[]): string {
     // This would generate Cypher CREATE statements for schema
     // For demo purposes, returning a template
     const statements = entities.map(entity => {

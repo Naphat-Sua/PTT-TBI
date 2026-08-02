@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Database, Share2, ZoomIn, ZoomOut, Maximize2, Box, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import ForceGraph2D from 'react-force-graph-2d';
+import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
 import { useToast } from '@/hooks/use-toast';
 
 // Type definitions for our graph data
@@ -31,7 +31,7 @@ export const GraphVisualizer = () => {
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const graphRef = useRef<any>(null);
+  const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
   const { toast } = useToast();
 
   // Neo4j connection parameters

@@ -444,11 +444,6 @@ const BrowserFrame = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showError, setShowError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  
-  useEffect(() => {
-    // Initialize with the default URL
-    handleNavigate(null, true);
-  }, []);
 
   const handleNavigate = (e: React.FormEvent | null, isInitial = false) => {
     if (e) {
@@ -616,7 +611,7 @@ const BrowserFrame = () => {
           title="Web Browser"
           sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads"
           allow="camera; microphone; geolocation"
-          importance="high"
+          loading="eager"
         />
       </div>
       

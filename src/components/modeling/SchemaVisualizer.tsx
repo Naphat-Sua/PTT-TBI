@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchDatasetById, DatasetDetail, Column } from '@/utils/dataModelingService';
 import { useToast } from '@/hooks/use-toast';
@@ -12,13 +12,7 @@ export const SchemaVisualizer: React.FC<SchemaVisualizerProps> = ({ datasetId })
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (datasetId) {
-      loadDatasetDetails(datasetId);
-    }
-  }, [datasetId]);
-
-  const loadDatasetDetails = async (id: string) => {
+  const loadDatasetDetails = useCallback(async (id: string) => {
     setIsLoading(true);
     try {
       const data = await fetchDatasetById(id);
@@ -33,7 +27,13 @@ export const SchemaVisualizer: React.FC<SchemaVisualizerProps> = ({ datasetId })
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (datasetId) {
+      loadDatasetDetails(datasetId);
+    }
+  }, [datasetId, loadDatasetDetails]);
 
   // Group columns by potential tables/entities based on naming patterns
   const getEntities = () => {
