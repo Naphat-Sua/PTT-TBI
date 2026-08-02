@@ -1,3 +1,4 @@
+# FastAPI platform API (backend/app)
 fastapi==0.104.1
 uvicorn==0.23.2
 sqlalchemy==2.0.23
@@ -29,3 +30,8 @@ py2neo==2021.2.4
 fastapi-pagination==0.12.10
 strawberry-graphql==0.211.1
 python-jose==3.3.0
+
+# Legacy Flask data-modeling API (backend/app.py) used by the frontend's
+# Data Modeling Studio page
+flask==3.0.0
+flask-cors==4.0.0

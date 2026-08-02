@@ -40,9 +40,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 // Types
 import { BacktestParameters, BacktestResult, BacktestStrategy } from '@/types';
+import type { PlotParams } from 'react-plotly.js';
 
 // Utilities
-import { loadOilDataFromFile, fetchOilData, formatOilDataToText } from '@/utils/oilDataService';
+import { loadOilDataFromFile, fetchOilData, formatOilDataToText, OilDataPoint } from '@/utils/oilDataService';
 import { runBacktest } from '@/utils/api';
 
 // Lazy load the Monaco Editor to avoid SSR issues
@@ -52,7 +53,7 @@ const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 const PlotComponent = lazy(() => import('react-plotly.js'));
 
 // Create a wrapper component for the Plot with Suspense
-const Plot = (props: any) => (
+const Plot = (props: PlotParams) => (
   <Suspense fallback={
     <div className="flex items-center justify-center h-full w-full bg-gray-100 dark:bg-gray-800 rounded-2xl">
       <MessageLoader size="lg" color="primary" />
@@ -73,7 +74,7 @@ const WTIStrategyBacktester = () => {
   const [error, setError] = useState<string | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
-  const [oilData, setOilData] = useState<any[]>([]);
+  const [oilData, setOilData] = useState<OilDataPoint[]>([]);
   
   const { toast } = useToast();
 
@@ -209,77 +210,11 @@ const WTIStrategyBacktester = () => {
   };
   
   // Chart data for equity curve
-  const equityChartData = useMemo(() => {
-    // If there's no backtest result yet, create a realistic equity curve that matches actual performance
+  const equityChartData = useMemo((): Plotly.Data[] => {
     if (!backtestResult?.equity || backtestResult.equity.length === 0) {
-      // Generate sample equity curve data based on actual performance (+118.99% return)
-      const startDate = new Date('2020-01-01'); // Starting from January 1, 2020 as specified
-      const endDate = new Date('2020-01-31');   // Ending on January 31, 2020 as specified
-      const daysDiff = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Generate dates between start and end (skip weekends)
-      const dates = [];
-      const values = [];
-      let currentDate = new Date(startDate);
-      
-      // Starting value
-      const startValue = 100000;
-      // Final value from actual results
-      const endValue = 218987.56; // $100,000 initial + $118,987.56 profit
-      
-      // Create a realistic growth curve for the one month period
-      while (currentDate <= endDate) {
-        // Skip weekends
-        if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-          currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
-          continue;
-        }
-        
-        // Calculate progress through the time period
-        const totalDays = daysDiff;
-        const daysPassed = Math.round((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const progress = daysPassed / totalDays;
-        
-        // Create slightly exponential growth (aggressive strategy)
-        // Use power function to create accelerating growth
-        const growthRate = Math.pow(progress, 0.8); // Makes growth more linear but still slightly curved
-        const baseValue = startValue + (endValue - startValue) * growthRate;
-        
-        // Add small fluctuations (high volatility for oil trading)
-        const volatility = 0.01; // 1% daily volatility
-        const randomFactor = 1 + (Math.random() * 2 - 1) * volatility;
-        const value = baseValue * randomFactor;
-        
-        dates.push(currentDate.toISOString().split('T')[0]);
-        values.push(value);
-        
-        // Move to next day
-        currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
-      }
-      
-      // Ensure the final point exactly matches our end value
-      if (dates.length > 0) {
-        values[values.length - 1] = endValue;
-      }
-      
-      return [
-        {
-          x: dates,
-          y: values,
-          type: 'scatter',
-          mode: 'lines',
-          name: 'Portfolio Value',
-          line: {
-            color: '#DFBD69',
-            width: 2
-          },
-          fillcolor: 'rgba(223, 189, 105, 0.1)',
-          fill: 'tozeroy'
-        }
-      ];
+      return [];
     }
-    
-    // If we have actual backtest data, use that
+
     return [
       {
         x: backtestResult.equity.map(point => point.date),
@@ -296,13 +231,13 @@ const WTIStrategyBacktester = () => {
       }
     ];
   }, [backtestResult]);
-  
+
   // Chart data for oil price with buy/sell signals
-  const oilPriceChartData = useMemo(() => {
+  const oilPriceChartData = useMemo((): Plotly.Data[] => {
     if (!backtestResult?.priceData) return [];
-    
+
     // Candlestick data for oil prices
-    const candlestickTrace = {
+    const candlestickTrace: Plotly.Data = {
       x: backtestResult.priceData.map(bar => bar.date),
       open: backtestResult.priceData.map(bar => bar.open),
       high: backtestResult.priceData.map(bar => bar.high),
@@ -313,10 +248,10 @@ const WTIStrategyBacktester = () => {
       increasing: {line: {color: '#26A69A'}},
       decreasing: {line: {color: '#EF5350'}}
     };
-    
+
     // Buy signals
     const buyTrades = backtestResult.trades.filter(trade => trade.type === 'buy');
-    const buyTrace = {
+    const buyTrace: Plotly.Data = {
       x: buyTrades.map(trade => trade.date),
       y: buyTrades.map(trade => trade.price),
       mode: 'markers',
@@ -331,15 +266,15 @@ const WTIStrategyBacktester = () => {
           width: 1
         }
       },
-      text: buyTrades.map(trade => 
+      text: buyTrades.map(trade =>
         `Buy: ${trade.size} units at ${formatCurrency(trade.price)}\nValue: ${formatCurrency(trade.value)}`
       ),
       hoverinfo: 'text'
     };
-    
+
     // Sell signals
     const sellTrades = backtestResult.trades.filter(trade => trade.type === 'sell');
-    const sellTrace = {
+    const sellTrace: Plotly.Data = {
       x: sellTrades.map(trade => trade.date),
       y: sellTrades.map(trade => trade.price),
       mode: 'markers',
@@ -354,12 +289,12 @@ const WTIStrategyBacktester = () => {
           width: 1
         }
       },
-      text: sellTrades.map(trade => 
+      text: sellTrades.map(trade =>
         `Sell: ${trade.size} units at ${formatCurrency(trade.price)}\nValue: ${formatCurrency(trade.value)}`
       ),
       hoverinfo: 'text'
     };
-    
+
     return [candlestickTrace, buyTrace, sellTrace];
   }, [backtestResult]);
   
@@ -682,11 +617,11 @@ const WTIStrategyBacktester = () => {
                     autosize: true,
                     margin: { l: 50, r: 20, t: 10, b: 30 },
                     xaxis: {
-                      title: 'Date',
+                      title: { text: 'Date' },
                       rangeslider: { visible: false }
                     },
                     yaxis: {
-                      title: 'Portfolio Value ($)',
+                      title: { text: 'Portfolio Value ($)' },
                       tickprefix: '$'
                     },
                     hovermode: 'x unified',
@@ -714,11 +649,11 @@ const WTIStrategyBacktester = () => {
                     autosize: true,
                     margin: { l: 50, r: 20, t: 10, b: 30 },
                     xaxis: {
-                      title: 'Date',
+                      title: { text: 'Date' },
                       rangeslider: { visible: false }
                     },
                     yaxis: {
-                      title: 'Price per Barrel ($)',
+                      title: { text: 'Price per Barrel ($)' },
                       tickprefix: '$'
                     },
                     legend: { orientation: 'h', y: 1.1 },

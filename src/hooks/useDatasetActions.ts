@@ -6,7 +6,7 @@ export const useDatasetActions = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const processDataset = async (dataset: any) => {
+  const processDataset = async (dataset: { name: string }) => {
     setIsProcessing(true);
     try {
       // Simulate processing with a delay

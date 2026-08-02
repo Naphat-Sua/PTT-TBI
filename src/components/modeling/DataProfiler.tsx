@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart3, FileBarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,27 +9,21 @@ interface DataProfilerProps {
   datasetId?: string;
 }
 
+// For demo purposes, if no datasetId is provided
+const sampleData = [
+  { column: 'timestamp', type: 'TIMESTAMP', completeness: 100, uniqueness: 100, min: '2023-01-01', max: '2023-12-31' },
+  { column: 'location_id', type: 'UUID', completeness: 100, uniqueness: 10, min: null, max: null },
+  { column: 'value', type: 'FLOAT', completeness: 98.7, uniqueness: 92.5, min: '0.15', max: '1458.92' },
+  { column: 'status', type: 'VARCHAR', completeness: 87.2, uniqueness: 4.5, min: null, max: null },
+  { column: 'quality_score', type: 'INTEGER', completeness: 76.3, uniqueness: 8.1, min: '1', max: '10' },
+];
+
 export const DataProfiler: React.FC<DataProfilerProps> = ({ datasetId }) => {
   const [profileData, setProfileData] = useState<DataProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // For demo purposes, if no datasetId is provided
-  const sampleData = [
-    { column: 'timestamp', type: 'TIMESTAMP', completeness: 100, uniqueness: 100, min: '2023-01-01', max: '2023-12-31' },
-    { column: 'location_id', type: 'UUID', completeness: 100, uniqueness: 10, min: null, max: null },
-    { column: 'value', type: 'FLOAT', completeness: 98.7, uniqueness: 92.5, min: '0.15', max: '1458.92' },
-    { column: 'status', type: 'VARCHAR', completeness: 87.2, uniqueness: 4.5, min: null, max: null },
-    { column: 'quality_score', type: 'INTEGER', completeness: 76.3, uniqueness: 8.1, min: '1', max: '10' },
-  ];
-
-  useEffect(() => {
-    if (datasetId) {
-      loadProfileData(datasetId);
-    }
-  }, [datasetId]);
-
-  const loadProfileData = async (id: string) => {
+  const loadProfileData = useCallback(async (id: string) => {
     setIsLoading(true);
     try {
       const profile = await getDatasetProfile(id);
@@ -44,7 +38,13 @@ export const DataProfiler: React.FC<DataProfilerProps> = ({ datasetId }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (datasetId) {
+      loadProfileData(datasetId);
+    }
+  }, [datasetId, loadProfileData]);
 
   // Transform profile data to table format
   const getTableData = () => {
