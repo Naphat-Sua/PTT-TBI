@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import FileUploadZone from '@/components/ui/FileUploadZone';
 import MessageLoader from '@/components/ui/message-loader';
 import { useToast } from '@/hooks/use-toast';
+import { STORAGE_KEYS, readJSON, reviveDateOr, writeJSON } from '@/utils/storage';
+import { loadDocuments } from '@/utils/documentLibrary';
 
 // Document Uploader Component
 const DocumentUploader = ({ onDocumentProcessed }: { onDocumentProcessed: (doc: Document) => void }) => {
@@ -614,8 +616,10 @@ const UsageManual = () => {
   );
 };
 
-// Main TBIRAG Component
-const TBIRAG = () => {
+// Main TBIRAG page.
+// Named in PascalCase (not all-caps "TBIRAG") so React Fast Refresh
+// recognises it as a component rather than a constant.
+const TbiRagPage = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isQuerying, setIsQuerying] = useState(false);
@@ -623,39 +627,34 @@ const TBIRAG = () => {
   
   // Load documents and chat history from localStorage on component mount
   useEffect(() => {
-    // Load documents
-    const savedDocs = localStorage.getItem('ragDocuments');
-    if (savedDocs) {
-      try {
-        setDocuments(JSON.parse(savedDocs));
-      } catch (e) {
-        console.error('Failed to load saved documents:', e);
-        toast({
-          title: "Error loading documents",
-          description: "Could not load your saved documents.",
-          variant: "destructive",
-        });
-      }
+    setDocuments(loadDocuments(STORAGE_KEYS.ragDocuments));
+
+    type SerializedChatMessage = Omit<ChatMessage, 'timestamp'> & { timestamp?: string };
+    const savedChat = readJSON<SerializedChatMessage[]>(STORAGE_KEYS.ragChatHistory, []);
+    if (Array.isArray(savedChat) && savedChat.length > 0) {
+      setChatHistory(
+        savedChat.map((msg) => ({ ...msg, timestamp: reviveDateOr(msg.timestamp) }))
+      );
     }
-    
-    // Load chat history
-    const savedChat = localStorage.getItem('ragChatHistory');
-    if (savedChat) {
-      try {
-        setChatHistory(JSON.parse(savedChat));
-      } catch (e) {
-        console.error('Failed to load chat history:', e);
-      }
-    }
-  }, [toast]);
-  
+  }, []);
+
   // Save documents and chat history to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('ragDocuments', JSON.stringify(documents));
-  }, [documents]);
-  
+    const result = writeJSON(STORAGE_KEYS.ragDocuments, documents);
+    if (!result.ok) {
+      toast({
+        title: "Documents not saved",
+        description:
+          result.reason === 'quota'
+            ? "Browser storage is full. Remove a document to save your library."
+            : "Your browser blocked local storage, so documents won't persist.",
+        variant: "destructive",
+      });
+    }
+  }, [documents, toast]);
+
   useEffect(() => {
-    localStorage.setItem('ragChatHistory', JSON.stringify(chatHistory));
+    writeJSON(STORAGE_KEYS.ragChatHistory, chatHistory);
   }, [chatHistory]);
   
   // Handle adding a new document
@@ -733,4 +732,4 @@ const TBIRAG = () => {
   );
 };
 
-export default TBIRAG;
+export default TbiRagPage;

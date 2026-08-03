@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Send, Bot, User, RefreshCw, Database, Loader2, ChevronDown, ChevronUp, BookOpen, Globe, ExternalLink, RefreshCcw } from 'lucide-react';
-import { Message, QueryResult } from '@/types';
-import { queryGemini, queryRAG } from '@/utils/api';
+import { Message } from '@/types';
+import { DEFAULT_GEMINI_MODEL, queryGemini, queryRAG } from '@/utils/api';
+import { loadDocumentsWithContent } from '@/utils/documentLibrary';
+import { STORAGE_KEYS, readJSON, removeItem, reviveDateOr, writeJSON } from '@/utils/storage';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +18,16 @@ import {
 } from '@/components/ui/select';
 import MessageLoader from '@/components/ui/message-loader';
 
-// Available AI models
+/**
+ * Selectable models. Every entry is a real Google Gemini model id that is
+ * passed through to the API, so the label always matches the model that
+ * actually answers.
+ */
 const AI_MODELS = [
-  { id: 'gemini-2.0-flash', name: 'Google Gemini 2.0' },
-  { id: 'claude-3.7', name: 'Claude 3.7 Sonnet' },
-  { id: 'deepseek-r1', name: 'DeepSeek-R1:32b' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
 ];
 
 // Message Bubble Component
@@ -75,32 +83,43 @@ const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [useRAG, setUseRAG] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
-  
+  const [selectedModel, setSelectedModel] = useState(
+    AI_MODELS.some((m) => m.id === DEFAULT_GEMINI_MODEL)
+      ? DEFAULT_GEMINI_MODEL
+      : AI_MODELS[0].id
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+  const { toast } = useToast();
+
   // Load messages from localStorage on component mount
   useEffect(() => {
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch (e) {
-        console.error('Failed to load saved messages:', e);
-      }
+    type SerializedMessage = Omit<Message, 'timestamp'> & { timestamp?: string };
+    const saved = readJSON<SerializedMessage[]>(STORAGE_KEYS.chatMessages, []);
+    if (Array.isArray(saved) && saved.length > 0) {
+      // Timestamps come back as strings from JSON; restore them as Dates
+      setMessages(saved.map((msg) => ({ ...msg, timestamp: reviveDateOr(msg.timestamp) })));
     }
-    
+
     // Focus the input field when the component mounts
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
-  
+
   // Save messages to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
-  }, [messages]);
+    const result = writeJSON(STORAGE_KEYS.chatMessages, messages);
+    if (!result.ok && result.reason === 'quota') {
+      toast({
+        title: 'Chat history not saved',
+        description:
+          'Browser storage is full. Clear the chat or remove documents to keep saving history.',
+        variant: 'destructive',
+      });
+    }
+  }, [messages, toast]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -135,36 +154,27 @@ const ChatInterface = () => {
     try {
       let response: string;
       let sources = undefined;
-      
-      // Check if RAG mode is enabled
+
       if (useRAG) {
-        // Mock documents for demo - in real app, this would come from the TBIRAG system
-        const mockDocuments = [
-          "Data analysis is the process of inspecting, cleansing, transforming, and modeling data to discover useful information, inform conclusions, and support decision-making.",
-          "Machine learning algorithms can be categorized as supervised (classification, regression), unsupervised (clustering, association), or reinforcement learning.",
-          "Feature engineering is the process of using domain knowledge to extract features from raw data that make machine learning algorithms work better."
-        ];
-        
-        // Query the RAG system
-        const ragResult = await queryRAG(input, mockDocuments);
-        response = ragResult.answer;
-        sources = ragResult.sources;
-      } else {
-        // Check if the message is asking about identity
-        if (isIdentityQuestion(input)) {
-          // Use the specific identity response based on the model
-          response = getIdentityResponse(selectedModel);
+        // Use the documents the user actually uploaded on the RAG pages
+        const documents = loadDocumentsWithContent();
+
+        if (documents.length === 0) {
+          response =
+            "RAG mode is on, but you haven't uploaded any documents yet. " +
+            'Add documents on the TBI RAG or Full RAG page, or switch RAG mode off to ask general questions.';
         } else {
-          // Use regular Gemini API for other questions
-          // We'll add a model prefix to the response based on the selected model
-          const modelPrefix = getModelPrefix(selectedModel);
-          
-          // Get the actual response from Gemini API
-          const geminiResponse = await queryGemini(input);
-          
-          // Prepend the model prefix to make it seem like it's coming from the selected model
-          response = `${modelPrefix}${geminiResponse}`;
+          const ragResult = await queryRAG(
+            input,
+            documents.map((doc) => doc.content ?? ''),
+            documents.map((doc) => doc.name),
+            selectedModel
+          );
+          response = ragResult.answer;
+          sources = ragResult.sources;
         }
+      } else {
+        response = await queryGemini(input, undefined, selectedModel);
       }
       
       // Create assistant message
@@ -201,51 +211,10 @@ const ChatInterface = () => {
     }
   };
   
-  // Get model prefix based on selected model
-  const getModelPrefix = (modelId: string) => {
-    // Only add a prefix for non-Gemini models to simulate different AI models
-    const model = AI_MODELS.find(m => m.id === modelId);
-    
-    if (!model || modelId.startsWith('gemini')) {
-      return ''; // No prefix for Gemini models
-    }
-    
-    return `[${model.name}] `;
-  };
-  
-  // Check if the message is asking about identity
-  const isIdentityQuestion = (message: string): boolean => {
-    const identityPatterns = [
-      /who are you/i,
-      /what are you/i,
-      /your name/i,
-      /introduce yourself/i,
-      /tell me about yourself/i,
-      /what's your name/i,
-      /what is your name/i,
-      /what model are you/i
-    ];
-    
-    return identityPatterns.some(pattern => pattern.test(message.toLowerCase()));
-  };
-  
-  // Get model-specific identity response
-  const getIdentityResponse = (modelId: string): string => {
-    switch (modelId) {
-      case 'claude-3.7':
-        return "I'm Claude, an AI assistant made by Anthropic to be helpful, harmless, and honest. I'm designed to be helpful, harmless, and honest.";
-      case 'deepseek-r1':
-        return "I'm DeepSeek-R1, an AI assistant built by the DeepSeek team. I'm a 32-billion parameter model designed to help with a wide range of tasks.";
-      default:
-        // Default to Gemini
-        return "I'm an AI assistant powered by Google Gemini. I'm designed to be helpful, accurate, and safe. How can I assist you today?";
-    }
-  };
-  
   // Clear chat history
   const handleClearChat = () => {
     setMessages([]);
-    localStorage.removeItem('chatMessages');
+    removeItem(STORAGE_KEYS.chatMessages);
     
     // Focus the input field after clearing chat
     if (inputRef.current) {
@@ -404,10 +373,10 @@ const ChatUsageManual = () => {
             <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-0">Getting Started</h4>
             <ol className="space-y-3 mt-3">
               <li>
-                <strong>Select an AI Model</strong> - Choose from Google Gemini 2.0, Claude 3.7 Sonnet, or DeepSeek-R1:32b using the dropdown menu.
+                <strong>Select an AI Model</strong> - Choose a Google Gemini model (Flash for speed, Pro for harder questions) using the dropdown menu.
               </li>
               <li>
-                <strong>Toggle RAG Mode</strong> - Enable RAG Mode to get answers based on document knowledge (if you've uploaded documents in the TBIRAG section).
+                <strong>Toggle RAG Mode</strong> - Enable RAG Mode to answer from the documents you uploaded on the TBI RAG or Full RAG pages.
               </li>
               <li>
                 <strong>Ask Questions</strong> - Type your message in the text box at the bottom and press Enter or click the send button.
@@ -416,19 +385,18 @@ const ChatUsageManual = () => {
             
             <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-6">Features</h4>
             <ul className="space-y-2 mt-3">
-              <li><strong>Multiple AI Models</strong> - Switch between different AI models to compare responses.</li>
-              <li><strong>RAG Support</strong> - When enabled, answers will reference your uploaded documents.</li>
+              <li><strong>Model Selection</strong> - Switch between Gemini models to trade speed against depth.</li>
+              <li><strong>RAG Support</strong> - When enabled, answers cite the specific excerpts from your uploaded documents.</li>
               <li><strong>Chat History</strong> - Your conversation is saved between sessions.</li>
               <li><strong>Clear Chat</strong> - Use the refresh button to start a new conversation.</li>
             </ul>
-            
+
             <h4 className="text-lg font-medium text-[#DFBD69] dark:text-[#DFBD69] mt-6">Tips for Better Results</h4>
             <ul className="space-y-2 mt-3">
               <li>Be specific in your questions to get more accurate responses.</li>
               <li>For document-specific questions, enable RAG Mode.</li>
-              <li>Different AI models may excel at different types of questions.</li>
-              <li>For technical or scientific questions, try Claude or DeepSeek.</li>
-              <li>For creative content or general knowledge, Gemini often works well.</li>
+              <li>Flash models answer fastest; Pro handles longer reasoning and technical detail better.</li>
+              <li>If RAG Mode returns nothing useful, check that your documents were uploaded and contain text.</li>
             </ul>
           </div>
         </CardContent>
@@ -449,22 +417,36 @@ const BrowserFrame = () => {
     if (e) {
       e.preventDefault();
     }
-    
+
     // Reset error state
     setShowError(false);
-    
+
     // Add https:// if not present
-    let processedUrl = isInitial ? url : inputUrl;
-    if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+    let processedUrl = (isInitial ? url : inputUrl).trim();
+    if (!/^https?:\/\//i.test(processedUrl)) {
       processedUrl = `https://${processedUrl}`;
     }
-    
+
+    // Only ever navigate to http(s); reject javascript:, data: and friends
+    // that could otherwise execute in the frame.
+    try {
+      const parsed = new URL(processedUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error('Unsupported protocol');
+      }
+      processedUrl = parsed.toString();
+    } catch {
+      setShowError(true);
+      setIsLoading(false);
+      return;
+    }
+
     // Update URL states
     setUrl(processedUrl);
     if (!isInitial) {
       setInputUrl(processedUrl);
     }
-    
+
     // Show loading indicator
     setIsLoading(true);
   };
@@ -609,8 +591,14 @@ const BrowserFrame = () => {
           onLoad={handleIframeLoad}
           onError={handleIframeError}
           title="Web Browser"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads"
-          allow="camera; microphone; geolocation"
+          // `allow-same-origin` is deliberately omitted: combined with
+          // `allow-scripts` it lets a same-origin page remove its own sandbox
+          // and reach the parent document. Framed pages keep an opaque origin.
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"
+          // No camera/microphone/geolocation — the user can navigate this frame
+          // to arbitrary URLs, which must not inherit powerful permissions.
+          allow=""
+          referrerPolicy="no-referrer"
           loading="eager"
         />
       </div>

@@ -13,8 +13,17 @@ export { chunkText };
 // ---------------------------------------------------------------------------
 
 const GEMINI_API_KEY: string = import.meta.env.VITE_GEMINI_API_KEY ?? '';
-const GEMINI_MODEL: string = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.0-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+/** Default model, overridable per request and via VITE_GEMINI_MODEL. */
+export const DEFAULT_GEMINI_MODEL: string =
+  import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.0-flash';
+
+/** Build the generateContent endpoint for a given model. */
+function geminiEndpoint(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    model
+  )}:generateContent`;
+}
 
 /** Optional remote backtest service; when unset, backtests run locally. */
 const BACKTEST_API_URL: string = import.meta.env.VITE_BACKTEST_API_URL ?? '';
@@ -30,8 +39,15 @@ const REQUEST_TIMEOUT_MS = 30_000;
 // Gemini
 // ---------------------------------------------------------------------------
 
-/** Query the Gemini API, optionally prefixing RAG context. */
-export async function queryGemini(prompt: string, context?: string): Promise<string> {
+/**
+ * Query the Gemini API, optionally prefixing RAG context.
+ * @param model - Gemini model id to use; defaults to DEFAULT_GEMINI_MODEL.
+ */
+export async function queryGemini(
+  prompt: string,
+  context?: string,
+  model: string = DEFAULT_GEMINI_MODEL
+): Promise<string> {
   if (!GEMINI_API_KEY) {
     return (
       'The AI service is not configured yet. Please set VITE_GEMINI_API_KEY in your ' +
@@ -45,7 +61,7 @@ export async function queryGemini(prompt: string, context?: string): Promise<str
   try {
     const text = context ? `${context}\n\nUser query: ${prompt}` : prompt;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${geminiEndpoint(model)}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -220,7 +236,8 @@ const RAG_TOP_K = 4;
 export async function queryRAG(
   query: string,
   documents: string[],
-  documentNames?: string[]
+  documentNames?: string[],
+  model: string = DEFAULT_GEMINI_MODEL
 ): Promise<QueryResult> {
   try {
     // Fall back to bundled oil price data when no documents are provided
@@ -249,7 +266,9 @@ export async function queryRAG(
     const contextData = retrieved.map((chunk) => chunk.text).join('\n\n---\n\n');
 
     const answer = await queryGemini(
-      `Query: ${query}\n\nBased on the following context, please provide a detailed answer:\n${contextData}`
+      `Query: ${query}\n\nBased on the following context, please provide a detailed answer:\n${contextData}`,
+      undefined,
+      model
     );
 
     // Build sources from the actual retrieved chunks

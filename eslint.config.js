@@ -25,5 +25,15 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-unused-vars": "off",
     },
+  },
+  {
+    // Vendored shadcn/ui primitives: these intentionally co-locate variant
+    // definitions (cva) and helper hooks with their components, which trips
+    // the fast-refresh rule. Keeping them byte-compatible with upstream is
+    // worth more than the HMR nicety.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
   }
 );

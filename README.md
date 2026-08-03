@@ -10,14 +10,17 @@ An AI-assisted data platform combining document Q&A (RAG), oil-market analysis, 
 | TBI RAG | `/rag` | Upload documents, chunk + embed them locally, and ask questions grounded in your files |
 | Full RAG | `/fullrag` | Extended RAG workspace with document library, summaries, and chat history |
 | AlgoTrade | `/algotrade` | Author a trading strategy and backtest it against WTI crude-oil data with candlestick/equity charts |
-| ChatTBU | `/chat` | Conversational AI assistant (Gemini) with optional RAG mode |
+| ChatTBU | `/chat` | Conversational AI assistant with a Gemini model selector and optional RAG mode over your uploaded documents |
 | Data Modeling | `/modeling` | Import datasets, profile them, and explore schema/graph visualizations |
 
 ### How the pieces work
 
 - **Retrieval:** documents are split into overlapping chunks (`src/utils/text.ts`), embedded as hashed bag-of-words vectors, and ranked by true cosine similarity (`src/utils/embeddings.ts`). Only the top-scoring chunks are sent to the LLM, and answer sources cite the exact excerpts used.
+- **Shared document library:** TBI RAG and Full RAG each persist a library to localStorage; ChatTBU's RAG mode reads both (`src/utils/documentLibrary.ts`), so "answer from my documents" uses what you actually uploaded.
+- **Model selection:** every entry in the ChatTBU model dropdown is a real Gemini model id that is passed through to the API, so the label always matches the model that answered.
 - **Backtesting:** when no remote backtest API is configured, a deterministic local engine (`src/utils/backtestEngine.ts`) simulates seeded price data and runs an SMA-crossover strategy — the same parameters always reproduce the same result.
 - **Charts:** Plotly and the Monaco editor are lazy-loaded, and every page is code-split, so the initial bundle stays small.
+- **Resilient storage:** all localStorage access goes through `src/utils/storage.ts`, which reports quota/unavailability as values instead of throwing — a full quota shows a toast rather than blanking the page.
 
 ## Getting started
 
@@ -56,6 +59,14 @@ npm test           # vitest unit tests
 npm run scheduler  # Node daemon that refreshes public oil data daily
 ```
 
+### Oil data scheduler
+
+`oildata-scheduler.js` fetches WTI prices from Yahoo Finance and rewrites
+`public/Oildata.txt` and `public/Oildata.csv` daily at 08:00 GMT+7. It retries
+with exponential backoff, writes atomically (temp file + rename, so a crash
+can't leave a truncated data file), refuses to overwrite good data with an
+empty response, and re-arms its timer even after a failed run.
+
 ## Backend (optional)
 
 The Data Modeling Studio page talks to a small Flask API (`backend/app.py`, port 5000) for dataset import/profiling. A newer FastAPI platform API lives under `backend/app/` (auth, projects, alembic migrations).
@@ -72,7 +83,11 @@ uvicorn app.main:app --reload # FastAPI platform API
 
 ## Testing
 
-Unit tests cover the retrieval pipeline (tokenization, embeddings, cosine ranking), the backtest engine (determinism, trade/equity accounting, performance metrics), CSV parsing, and text chunking:
+87 unit tests cover the retrieval pipeline (tokenization, embeddings, cosine
+ranking), the backtest engine (determinism, trade/equity accounting,
+performance metrics), CSV parsing, text chunking, localStorage failure modes
+(quota, corruption, unavailable), the shared document library, and the
+scheduler's parsing/formatting/scheduling logic:
 
 ```sh
 npm test

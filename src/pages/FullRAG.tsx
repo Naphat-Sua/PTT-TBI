@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
+import { STORAGE_KEYS, readJSON, reviveDateOr, writeJSON } from '@/utils/storage';
+import { loadDocuments } from '@/utils/documentLibrary';
 
 // OilData Fetcher Component
 const OilDataFetcher = ({ onDataFetched }: { onDataFetched: (doc: Document) => void }) => {
@@ -846,34 +848,17 @@ const FullRAG = () => {
   useEffect(() => {
     try {
       // Load documents - using a different key than TBIRAG to maintain separate storage
-      type SerializedDocument = Omit<Document, 'uploadedAt' | 'lastAccessed'> & {
-        uploadedAt: string;
-        lastAccessed?: string;
-      };
-      type SerializedChatMessage = Omit<ChatMessage, 'timestamp'> & { timestamp: string };
+      setDocuments(loadDocuments(STORAGE_KEYS.fullRagDocuments));
 
-      const savedDocs = localStorage.getItem('fullRagDocuments');
-      if (savedDocs) {
-        const parsedDocs: SerializedDocument[] = JSON.parse(savedDocs);
-        // Convert string dates back to Date objects
-        const processedDocs: Document[] = parsedDocs.map((doc) => ({
-          ...doc,
-          uploadedAt: new Date(doc.uploadedAt),
-          lastAccessed: doc.lastAccessed ? new Date(doc.lastAccessed) : undefined
-        }));
-        setDocuments(processedDocs);
-      }
-
-      // Load chat history - using a different key than TBIRAG
-      const savedChat = localStorage.getItem('fullRagChatHistory');
-      if (savedChat) {
-        const parsedChat: SerializedChatMessage[] = JSON.parse(savedChat);
-        // Convert string dates back to Date objects
-        const processedChat: ChatMessage[] = parsedChat.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-        setChatHistory(processedChat);
+      type SerializedChatMessage = Omit<ChatMessage, 'timestamp'> & { timestamp?: string };
+      const savedChat = readJSON<SerializedChatMessage[]>(
+        STORAGE_KEYS.fullRagChatHistory,
+        []
+      );
+      if (Array.isArray(savedChat) && savedChat.length > 0) {
+        setChatHistory(
+          savedChat.map((msg) => ({ ...msg, timestamp: reviveDateOr(msg.timestamp) }))
+        );
       }
     } catch (e) {
       console.error('Failed to load saved data:', e);
@@ -884,27 +869,24 @@ const FullRAG = () => {
       });
     }
   }, [toast]);
-  
+
   // Save documents and chat history to localStorage when they change
   useEffect(() => {
-    try {
-      localStorage.setItem('fullRagDocuments', JSON.stringify(documents));
-    } catch (e) {
-      console.error('Failed to save documents:', e);
+    const result = writeJSON(STORAGE_KEYS.fullRagDocuments, documents);
+    if (!result.ok) {
       toast({
-        title: "Error saving documents",
-        description: "Your document changes couldn't be saved locally.",
+        title: "Documents not saved",
+        description:
+          result.reason === 'quota'
+            ? "Browser storage is full. Remove a document to save your library."
+            : "Your browser blocked local storage, so documents won't persist.",
         variant: "destructive",
       });
     }
   }, [documents, toast]);
-  
+
   useEffect(() => {
-    try {
-      localStorage.setItem('fullRagChatHistory', JSON.stringify(chatHistory));
-    } catch (e) {
-      console.error('Failed to save chat history:', e);
-    }
+    writeJSON(STORAGE_KEYS.fullRagChatHistory, chatHistory);
   }, [chatHistory]);
   
   // Handle adding a new document
