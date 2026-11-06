@@ -200,26 +200,38 @@ export function computePerformance(
       ? (Math.pow(finalValue / initialCapital, 1 / years) - 1) * 100
       : 0;
 
-  // Win rate and profit factor from realized round trips
+  // Win rate and profit factor from realized exits. Sells that carry a
+  // `pnl` (net of fees) use it directly; otherwise pair with the last buy.
   let wins = 0;
   let losses = 0;
   let grossProfit = 0;
   let grossLoss = 0;
+  let maxWin = 0;
+  let maxLoss = 0;
   let lastBuy: TradeSignal | null = null;
 
   for (const trade of trades) {
     if (trade.type === 'buy') {
       lastBuy = trade;
-    } else if (trade.type === 'sell' && lastBuy) {
-      const pnl = (trade.price - lastBuy.price) * trade.size;
-      if (pnl > 0) {
-        wins++;
-        grossProfit += pnl;
-      } else {
-        losses++;
-        grossLoss += Math.abs(pnl);
-      }
+      continue;
+    }
+    let pnl: number;
+    if (trade.pnl !== undefined) {
+      pnl = trade.pnl;
+    } else if (lastBuy) {
+      pnl = (trade.price - lastBuy.price) * trade.size;
       lastBuy = null;
+    } else {
+      continue;
+    }
+    if (pnl > 0) {
+      wins++;
+      grossProfit += pnl;
+      maxWin = Math.max(maxWin, pnl);
+    } else {
+      losses++;
+      grossLoss += Math.abs(pnl);
+      maxLoss = Math.min(maxLoss, pnl);
     }
   }
 
@@ -253,6 +265,10 @@ export function computePerformance(
     winRate,
     totalTrades: roundTrips,
     profitFactor,
+    averageWin: wins > 0 ? grossProfit / wins : 0,
+    averageLoss: losses > 0 ? -grossLoss / losses : 0,
+    maxWin,
+    maxLoss,
   };
 }
 
