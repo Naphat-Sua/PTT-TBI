@@ -40,6 +40,10 @@ export interface TradeSignal {
   price: number;
   size: number;
   value: number;
+  /** Commission paid on this fill */
+  fee?: number;
+  /** Realized profit/loss (net of fees), set on sells */
+  pnl?: number;
 }
 
 export interface EquityPoint {
@@ -61,6 +65,12 @@ export interface BacktestPerformance {
   averageLoss?: number;
   maxWin?: number;
   maxLoss?: number;
+  /** Total commission paid across all fills */
+  totalFees?: number;
+  /** Buy-and-hold return over the same bars, in percent */
+  buyHoldReturn?: number;
+  /** Share of bars with an open position, in percent */
+  exposure?: number;
 }
 
 export interface BacktestResult {
@@ -70,6 +80,10 @@ export interface BacktestResult {
   trades: TradeSignal[];
   equity: EquityPoint[];
   performance: BacktestPerformance;
+  /** Buy-and-hold equity curve for comparison */
+  benchmark?: EquityPoint[];
+  /** Messages written by the strategy via ctx.log() */
+  logs?: string[];
 }
 
 export interface BacktestRequest {

@@ -9,15 +9,16 @@ An AI-assisted data platform combining document Q&A (RAG), oil-market analysis, 
 | Home | `/` | Landing page and navigation hub |
 | TBI RAG | `/rag` | Upload documents, chunk + embed them locally, and ask questions grounded in your files |
 | Full RAG | `/fullrag` | Extended RAG workspace with document library, summaries, and chat history |
-| AlgoTrade | `/algotrade` | Author a trading strategy and backtest it against WTI crude-oil data with candlestick/equity charts |
+| AlgoTrade | `/algotrade` | Write JavaScript trading strategies and backtest them on simulated, bundled WTI, or uploaded CSV prices, with costs, a buy-and-hold benchmark, and CSV export |
 | ChatTBU | `/chat` | Conversational AI assistant (Gemini) with optional RAG mode |
 | Data Modeling | `/modeling` | Import datasets, profile them, and explore schema/graph visualizations |
 
 ### How the pieces work
 
 - **Retrieval:** documents are split into overlapping chunks (`src/utils/text.ts`), embedded as hashed bag-of-words vectors, and ranked by true cosine similarity (`src/utils/embeddings.ts`). Only the top-scoring chunks are sent to the LLM, and answer sources cite the exact excerpts used.
-- **Backtesting:** when no remote backtest API is configured, a deterministic local engine (`src/utils/backtestEngine.ts`) simulates seeded price data and runs an SMA-crossover strategy — the same parameters always reproduce the same result.
-- **Charts:** Plotly and the Monaco editor are lazy-loaded, and every page is code-split, so the initial bundle stays small.
+- **Backtesting:** strategies are plain JavaScript `onBar(ctx)` functions run by an event-driven engine (`src/utils/strategyEngine.ts`) inside a Web Worker with a 10 s time limit. Orders fill at the next bar's open with configurable commission and slippage, so there is no look-ahead bias. Built-in indicators (`src/utils/indicators.ts`): SMA, EMA, RSI, Bollinger Bands, MACD, ATR. Templates include SMA crossover, RSI mean reversion, Bollinger bounce, and MACD + ATR trailing stop.
+- **Price data:** a seeded simulator for quick experiments, the bundled WTI sample, or any CSV from Yahoo Finance, Investing.com, or TradingView (`src/utils/priceData.ts` detects columns, date formats, and values like `18.09K`).
+- **Charts:** Plotly (finance-only bundle, about a quarter of full plotly.js) and the Monaco editor are lazy-loaded, and every page is code-split, so the initial bundle stays small.
 
 ## Getting started
 
@@ -72,7 +73,7 @@ uvicorn app.main:app --reload # FastAPI platform API
 
 ## Testing
 
-Unit tests cover the retrieval pipeline (tokenization, embeddings, cosine ranking), the backtest engine (determinism, trade/equity accounting, performance metrics), CSV parsing, and text chunking:
+Unit tests cover the retrieval pipeline (tokenization, embeddings, cosine ranking), the strategy engine (next-bar fills, fees and slippage, partial exits, no look-ahead, every template), technical indicators, price CSV loading, performance metrics, and text chunking:
 
 ```sh
 npm test
@@ -83,7 +84,7 @@ npm test
 - [Vite](https://vitejs.dev/) + [React 18](https://react.dev/) + TypeScript
 - [shadcn/ui](https://ui.shadcn.com/) on Radix primitives, Tailwind CSS
 - TanStack Query, React Router
-- Plotly (lazy-loaded) for financial charts, Monaco for the strategy editor
+- Plotly finance bundle (lazy-loaded) for charts, Monaco for the strategy editor, Web Workers for sandboxed backtests
 - Vitest for unit tests; GitHub Actions CI (lint, typecheck, test, build)
 
 ## License
